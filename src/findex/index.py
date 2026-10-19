@@ -2,42 +2,14 @@ import argparse
 import time
 import tracemalloc
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
 
 from findex.corpus import iter_documents
+from findex.models import DocMeta, InvertedIndex, Posting
 from findex.tokenize import tokenize
 
-
-@dataclass(frozen=True, slots=True)
-class Posting:
-    doc_id: int
-    tf: int
-    positions: tuple[int, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
-class DocMeta:
-    doc_id: int
-    path: str
-    title: str
-    length: int
-
-
-@dataclass
-class InvertedIndex:
-    postings: dict[str, list[Posting]] = field(default_factory=dict)
-    doc_lengths: dict[int, int] = field(default_factory=dict)
-    doc_meta: dict[int, DocMeta] = field(default_factory=dict)
-
-    @property
-    def num_documents(self) -> int:
-        return len(self.doc_meta)
-
-    @property
-    def num_terms(self) -> int:
-        return len(self.postings)
+__all__ = ["DocMeta", "InvertedIndex", "Posting", "build_index", "main"]
 
 
 def build_index(
@@ -104,7 +76,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=None, help="Output file path")
     parser.add_argument("--positions", action="store_true", help="Record token positions")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of documents")
-    parser.add_argument("--format", choices=["pickle", "json"], default="pickle", help="Storage format")
+    parser.add_argument("--format", choices=["pickle", "json"], default=None, help="Storage format")
     args = parser.parse_args()
 
     tracemalloc.start()

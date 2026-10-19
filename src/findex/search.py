@@ -3,7 +3,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from findex.index import InvertedIndex, Posting
+from findex.models import InvertedIndex, Posting
 from findex.tokenize import tokenize
 
 
