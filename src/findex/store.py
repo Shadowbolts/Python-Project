@@ -1,11 +1,13 @@
 import json
 import pickle
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
-from findex.models import DocMeta, InvertedIndex, Posting
+from findex.models import DocMeta, Index, InvertedIndex, Posting
 
 
-def save_index(index: InvertedIndex, path: Path, format: str | None = None) -> None:
+def save_index(index: Index, path: Path, format: str | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fmt = format or ("json" if path.suffix == ".json" else "pickle")
 
@@ -38,14 +40,14 @@ def save_index(index: InvertedIndex, path: Path, format: str | None = None) -> N
         raise ValueError(msg)
 
 
-def load_index(path: Path, format: str | None = None) -> InvertedIndex:
+def load_index(path: Path, format: str | None = None) -> Index:
     fmt = format or ("json" if path.suffix == ".json" else "pickle")
 
     if fmt == "pickle":
         with path.open("rb") as f:
             obj = pickle.load(f)
-            if not isinstance(obj, InvertedIndex):
-                msg = "Loaded object is not an InvertedIndex"
+            if not isinstance(obj, (Index, InvertedIndex)):
+                msg = "Loaded object is not an Index"
                 raise TypeError(msg)
             return obj
     elif fmt == "json":
@@ -73,10 +75,19 @@ def load_index(path: Path, format: str | None = None) -> InvertedIndex:
             )
             for k, v in data["doc_meta"].items()
         }
-        return InvertedIndex(postings=postings, doc_lengths=doc_lengths, doc_meta=doc_meta)
+        return Index(postings=postings, doc_lengths=doc_lengths, doc_meta=doc_meta)
     else:
         msg = f"Unsupported format: {fmt}"
         raise ValueError(msg)
+
+
+@contextmanager
+def open_index(path: Path, format: str | None = None) -> Iterator[Index]:
+    index = load_index(path, format=format)
+    try:
+        yield index
+    finally:
+        pass
 
 
 save = save_index

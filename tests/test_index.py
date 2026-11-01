@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from findex.index import DocMeta, InvertedIndex, Posting, build_index
+import pytest
+
+from findex.index import DocMeta, Index, InvertedIndex, Posting, build_index
+from findex.store import open_index, save_index
 
 
 def test_posting_hashable_and_set() -> None:
@@ -36,8 +39,10 @@ def test_build_index_basic(tmp_path: Path) -> None:
 
     index = build_index(tmp_path)
 
+    assert isinstance(index, Index)
     assert isinstance(index, InvertedIndex)
     assert index.num_documents == 2
+    assert index.num_docs == 2
     assert "hello" in index.postings
     assert "world" in index.postings
 
@@ -80,3 +85,51 @@ def test_build_index_with_positions(tmp_path: Path) -> None:
     assert len(postings) == 1
     assert postings[0].tf == 3
     assert postings[0].positions == (0, 2, 4)
+
+
+def test_index_dunder_methods() -> None:
+    postings = {
+        "apple": [Posting(doc_id=0, tf=2)],
+        "banana": [Posting(doc_id=0, tf=1), Posting(doc_id=1, tf=3)],
+    }
+    doc_lengths = {0: 3, 1: 3}
+    doc_meta = {
+        0: DocMeta(doc_id=0, path="a.txt", title="A", length=3),
+        1: DocMeta(doc_id=1, path="b.txt", title="B", length=3),
+    }
+    index = Index(postings=postings, doc_lengths=doc_lengths, doc_meta=doc_meta)
+
+    assert len(index) == 2
+    assert "apple" in index
+    assert "banana" in index
+    assert "cherry" not in index
+    assert index["apple"] == postings["apple"]
+    with pytest.raises(KeyError):
+        _ = index["cherry"]
+
+    terms = list(index)
+    assert set(terms) == {"apple", "banana"}
+    assert repr(index) == "Index(terms=2, docs=2, avg_doc_len=3.0)"
+
+    assert index.num_docs == 2
+    assert index.avg_doc_length == 3.0
+    assert index.doc_length(0) == 3
+    assert index.df("apple") == 1
+    assert index.df("banana") == 2
+    assert index.df("cherry") == 0
+
+
+def test_open_index_context_manager(tmp_path: Path) -> None:
+    postings = {"test": [Posting(doc_id=0, tf=1)]}
+    index = Index(
+        postings=postings,
+        doc_lengths={0: 1},
+        doc_meta={0: DocMeta(doc_id=0, path="t.txt", title="T", length=1)},
+    )
+    file_path = tmp_path / "index.pkl"
+    save_index(index, file_path)
+
+    with open_index(file_path) as ix:
+        assert isinstance(ix, Index)
+        assert len(ix) == 1
+        assert "test" in ix

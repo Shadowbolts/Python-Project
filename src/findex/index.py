@@ -6,10 +6,10 @@ from itertools import islice
 from pathlib import Path
 
 from findex.corpus import iter_documents
-from findex.models import DocMeta, InvertedIndex, Posting
+from findex.models import DocMeta, Index, InvertedIndex, Posting
 from findex.tokenize import tokenize
 
-__all__ = ["DocMeta", "InvertedIndex", "Posting", "build_index", "main"]
+__all__ = ["DocMeta", "Index", "InvertedIndex", "Posting", "build_index", "main"]
 
 
 def build_index(
@@ -17,7 +17,7 @@ def build_index(
     *,
     record_positions: bool = False,
     limit: int | None = None,
-) -> InvertedIndex:
+) -> Index:
     postings = defaultdict(list)
     doc_lengths: dict[int, int] = {}
     doc_meta: dict[int, DocMeta] = {}
@@ -63,7 +63,7 @@ def build_index(
             for term, count in term_counts.items():
                 postings[term].append(Posting(doc_id=doc_id, tf=count))
 
-    return InvertedIndex(
+    return Index(
         postings=dict(postings),
         doc_lengths=doc_lengths,
         doc_meta=doc_meta,
