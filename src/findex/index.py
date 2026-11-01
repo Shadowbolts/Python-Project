@@ -7,11 +7,13 @@ from pathlib import Path
 
 from findex.corpus import iter_documents
 from findex.models import DocMeta, Index, InvertedIndex, Posting
+from findex.timing import timed
 from findex.tokenize import tokenize
 
 __all__ = ["DocMeta", "Index", "InvertedIndex", "Posting", "build_index", "main"]
 
 
+@timed
 def build_index(
     root: Path,
     *,

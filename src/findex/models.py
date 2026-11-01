@@ -24,6 +24,9 @@ class Index(Mapping[str, list[Posting]]):
     doc_lengths: dict[int, int] = field(default_factory=dict)
     doc_meta: dict[int, DocMeta] = field(default_factory=dict)
 
+    def __hash__(self) -> int:
+        return id(self)
+
     def __len__(self) -> int:
         return len(self.postings)
 

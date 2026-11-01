@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from findex.models import DocMeta, Index, InvertedIndex, Posting
+from findex.timing import timed
 
 
 def save_index(index: Index, path: Path, format: str | None = None) -> None:
@@ -40,6 +41,7 @@ def save_index(index: Index, path: Path, format: str | None = None) -> None:
         raise ValueError(msg)
 
 
+@timed
 def load_index(path: Path, format: str | None = None) -> Index:
     fmt = format or ("json" if path.suffix == ".json" else "pickle")
 
