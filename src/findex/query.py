@@ -164,8 +164,7 @@ class QueryParser:
     def parse(self) -> QueryNode:
         if not self.tokens:
             return Term("")
-        node = self.parse_or()
-        return node
+        return self.parse_or()
 
     def parse_or(self) -> QueryNode:
         node = self.parse_and()
@@ -177,7 +176,8 @@ class QueryParser:
     def parse_and(self) -> QueryNode:
         node = self.parse_not()
         while True:
-            if self.match("AND") or self.peek() and self.peek().type in ("TERM", "PHRASE", "LPAREN", "NOT"):
+            peek_tok = self.peek()
+            if self.match("AND") or (peek_tok is not None and peek_tok.type in ("TERM", "PHRASE", "LPAREN", "NOT")):
                 right = self.parse_not()
                 node = And(node, right)
             else:

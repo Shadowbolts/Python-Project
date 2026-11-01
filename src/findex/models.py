@@ -20,9 +20,9 @@ class DocMeta:
 
 @dataclass
 class Index(Mapping[str, list[Posting]]):
-    postings: dict[str, list[Posting]] = field(default_factory=dict)
-    doc_lengths: dict[int, int] = field(default_factory=dict)
-    doc_meta: dict[int, DocMeta] = field(default_factory=dict)
+    postings: dict[str, list[Posting]] = field(default_factory=dict[str, list[Posting]])
+    doc_lengths: dict[int, int] = field(default_factory=dict[int, int])
+    doc_meta: dict[int, DocMeta] = field(default_factory=dict[int, DocMeta])
 
     def __hash__(self) -> int:
         return id(self)

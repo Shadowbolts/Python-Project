@@ -4,6 +4,7 @@ import tracemalloc
 from collections import Counter, defaultdict
 from itertools import islice
 from pathlib import Path
+from typing import Literal
 
 from findex.corpus import iter_documents
 from findex.models import DocMeta, Index, InvertedIndex, Posting
@@ -20,7 +21,7 @@ def build_index(
     record_positions: bool = False,
     limit: int | None = None,
 ) -> Index:
-    postings = defaultdict(list)
+    postings: defaultdict[str, list[Posting]] = defaultdict(list)
     doc_lengths: dict[int, int] = {}
     doc_meta: dict[int, DocMeta] = {}
 
@@ -78,7 +79,12 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=None, help="Output file path")
     parser.add_argument("--positions", action="store_true", help="Record token positions")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of documents")
-    parser.add_argument("--format", choices=["pickle", "json"], default=None, help="Storage format")
+    parser.add_argument(
+        "--format",
+        choices=["pickle", "json"],
+        default=None,
+        help="Storage format",
+    )
     args = parser.parse_args()
 
     tracemalloc.start()
@@ -98,7 +104,8 @@ def main() -> None:
     if args.out:
         from findex.store import save_index
 
-        save_index(index, args.out, format=args.format)
+        fmt: Literal["pickle", "json"] | None = args.format
+        save_index(index, args.out, format=fmt)
         print(f"Saved index to {args.out}")
 
 

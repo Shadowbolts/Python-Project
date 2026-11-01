@@ -1,4 +1,5 @@
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 from findex.tokenize import tokenize
@@ -6,7 +7,7 @@ from findex.tokenize import tokenize
 
 def extract_snippet(
     text: str,
-    query_terms: list[str],
+    query_terms: Sequence[str],
     window: int = 80,
     highlight_prefix: str = "**",
     highlight_suffix: str = "**",
@@ -14,7 +15,7 @@ def extract_snippet(
     if not text:
         return ""
 
-    normalized_terms = set()
+    normalized_terms: set[str] = set()
     for q in query_terms:
         for tok in tokenize(q):
             normalized_terms.add(tok)
@@ -41,7 +42,7 @@ def extract_snippet(
     raw_snippet = text[start:end].strip()
 
     pattern = re.compile(
-        r"\b(" + "|".join(re.escape(term) for term in normalized_terms) + r")\b",
+        r"\b(" + "|".join(re.escape(t) for t in normalized_terms) + r")\b",
         re.IGNORECASE,
     )
     highlighted = pattern.sub(rf"{highlight_prefix}\g<0>{highlight_suffix}", raw_snippet)
@@ -54,7 +55,7 @@ def extract_snippet(
 
 def snippet_for_doc(
     doc_path: str,
-    query_terms: list[str],
+    query_terms: Sequence[str],
     window: int = 80,
 ) -> str:
     path = Path(doc_path)
