@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import sys
@@ -8,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from findex.crawler.crawl_cmd import run_crawl_cli
 from findex.index import build_index
 from findex.scoring import BM25, Scorer, TfIdf
 from findex.search import search
@@ -151,6 +153,41 @@ def stats(
     table.add_row("Total Postings", str(total_postings))
 
     console.print(table)
+
+
+@app.command(name="crawl")
+def crawl_cmd(
+    seed: Annotated[str, typer.Argument(help="Seed URL to start crawling from.")],
+    max_pages: Annotated[int, typer.Option("--max-pages", "-n", help="Maximum pages to crawl.")] = 200,
+    concurrency: Annotated[int, typer.Option("--concurrency", "-c", help="Global concurrent workers.")] = 10,
+    per_host: Annotated[int, typer.Option("--per-host", help="Max concurrent requests per host.")] = 2,
+    min_delay: Annotated[float, typer.Option("--min-delay", help="Minimum delay between requests to same host (s).")] = 0.05,
+    allowed_domain: Annotated[
+        list[str] | None,
+        typer.Option("--allowed-domain", "-d", help="Restrict crawl to specific domain(s)."),
+    ] = None,
+    out: Annotated[Path, typer.Option("--out", "-o", help="Output JSONL file path.")] = Path("crawl.jsonl"),
+    log_file: Annotated[Path, typer.Option("--log", help="Log file path.")] = Path("crawl.log"),
+) -> None:
+    """Crawl web pages asynchronously and stream results to JSONL."""
+    pages_count, elapsed = asyncio.run(
+        run_crawl_cli(
+            [seed],
+            max_pages=max_pages,
+            concurrency=concurrency,
+            per_host=per_host,
+            min_delay=min_delay,
+            allowed_domains=allowed_domain,
+            out_path=out,
+            log_path=log_file,
+            console=console,
+        )
+    )
+    rate = pages_count / elapsed if elapsed > 0 else 0.0
+    console.print(
+        f"[bold green]Crawled[/bold green] {pages_count} pages in {elapsed:.2f}s "
+        f"({rate:.2f} pages/s) -> [cyan]{out}[/cyan] (log: [cyan]{log_file}[/cyan])"
+    )
 
 
 if __name__ == "__main__":

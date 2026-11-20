@@ -58,3 +58,9 @@ def test_cli_search_json_and_table(tmp_path: Path, session_index: Index) -> None
     assert "doc_id" in parsed
     assert "score" in parsed
     assert "title" in parsed
+
+
+def test_cli_crawl_help() -> None:
+    result = runner.invoke(app, ["crawl", "--help"])
+    assert result.exit_code == 0
+    assert "seed url" in result.stdout.lower()
