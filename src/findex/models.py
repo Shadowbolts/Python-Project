@@ -19,6 +19,13 @@ class DocMeta:
 
 
 @dataclass
+class PartialIndex:
+    postings: dict[str, list[Posting]] = field(default_factory=dict[str, list[Posting]])
+    doc_lengths: dict[int, int] = field(default_factory=dict[int, int])
+    doc_meta: dict[int, DocMeta] = field(default_factory=dict[int, DocMeta])
+
+
+@dataclass
 class Index(Mapping[str, list[Posting]]):
     postings: dict[str, list[Posting]] = field(default_factory=dict[str, list[Posting]])
     doc_lengths: dict[int, int] = field(default_factory=dict[int, int])
