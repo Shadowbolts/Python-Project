@@ -53,6 +53,11 @@ def index(
     out: Annotated[Path, typer.Option("--out", "-o", help="Output path for saved index.")] = Path("index.pkl"),
     positions: Annotated[bool, typer.Option("--positions", help="Record token positions for phrase queries.")] = False,
     limit: Annotated[int | None, typer.Option("--limit", "-n", help="Limit number of documents to index.")] = None,
+    workers: Annotated[int, typer.Option("--workers", "-w", help="Number of parallel workers.")] = 1,
+    executor: Annotated[
+        Literal["serial", "threads", "processes"],
+        typer.Option("--executor", "-e", help="Execution backend (serial, threads, processes)."),
+    ] = "processes",
     format: Annotated[Literal["pickle", "json"] | None, typer.Option("--format", help="Serialization format.")] = None,
 ) -> None:
     if not corpus.exists():
@@ -60,12 +65,23 @@ def index(
         raise typer.Exit(code=1)
 
     with console.status(f"[bold green]Indexing {corpus}...[/bold green]"):
-        idx = build_index(corpus, record_positions=positions, limit=limit)
+        try:
+            idx = build_index(
+                corpus,
+                record_positions=positions,
+                limit=limit,
+                workers=workers,
+                executor=executor,
+            )
+        except Exception as e:
+            err_console.print(f"[bold red]Indexing failed:[/bold red] {e}")
+            raise typer.Exit(code=1) from e
+
         save_index(idx, out, format=format)
 
     console.print(
         f"[bold green]Successfully indexed[/bold green] {idx.num_docs} documents "
-        f"({len(idx)} unique terms) -> [cyan]{out}[/cyan]"
+        f"({len(idx)} unique terms) via [yellow]{executor}[/yellow] ({workers} worker{'s' if workers > 1 else ''}) -> [cyan]{out}[/cyan]"
     )
 
 
