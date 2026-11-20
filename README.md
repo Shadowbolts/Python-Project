@@ -282,6 +282,43 @@ findex index data/ --out index.pkl --workers 8 --executor processes
 # 4. Порівняльний запуск через ThreadPoolExecutor (демонстрація впливу GIL)
 findex index data/ --out index.pkl --workers 8 --executor threads
 
-# 5. Запуск на вільнопотоковому Python 3.13t без GIL
+# 5. Запуск на вільнопотоковму Python 3.13t без GIL
 C:\Users\Влад\AppData\Roaming\uv\python\cpython-3.13+freethreaded-windows-x86_64-none\python.exe -c "import sys; print('GIL status:', sys._is_gil_enabled()); from findex.index import build_index; from pathlib import Path; idx = build_index(Path('data'), workers=8, executor='threads'); print('Indexed docs:', idx.num_docs)"
+```
+
+---
+
+## Лабораторна робота 6: Асинхронний вебкраулер (`asyncio`, `httpx`, `TaskGroup`)
+
+Мета роботи: реалізувати ввічливий асинхронний вебкраулер у модулі `findex.crawler` з підтримкою повторних спроб (exponential backoff + jitter, `Retry-After`), кешуванням `robots.txt`, чергою URL (`asyncio.Queue`), пулом корутин на базі `asyncio.TaskGroup`, обмеженням конкурентності (глобальний семафор + per-host rate limiting), канонізацією URL та потоковим виведенням результатів у форматі JSONL через CLI `findex crawl`.
+
+### Архітектура модуля `findex.crawler`
+
+* `src/findex/crawler/fetch.py` — `async def fetch()` з `asyncio.timeout`, повторними спробами на 5xx/мережеві помилки, повагою до заголовка `Retry-After` та без повторів на 4xx.
+* `src/findex/crawler/robots.py` — `RobotsCache` для асинхронного завантаження та кешування правил `robots.txt` для кожного хоста.
+* `src/findex/crawler/crawl.py` — `async def crawl() -> AsyncIterator[Page]` із чергою `asyncio.Queue`, воркерами в `asyncio.TaskGroup`, канонізацією URL та парсингом посилань і тексту через `selectolax.lexbor.LexborHTMLParser`.
+* `src/findex/crawler/crawl_cmd.py` та команда `findex crawl` — потоковий запис у `crawl.jsonl`, журналювання в `crawl.log` та жива таблиця статистики `rich.live.Live`.
+
+### Бенчмарк продуктивності краулера (`https://books.toscrape.com`, 30 сторінок)
+
+| Конкурентність (`concurrency`) | Сторінок | Час виконання (s) | Швидкість (pages/s) | Пам'ять RSS (MB) | Прискорення |
+|---|---|---|---|---|---|
+| `1` | 30 | 5.76 s | 5.21 pages/s | 41.4 MB | **1.00×** |
+| `5` | 30 | 2.52 s | 11.91 pages/s | 43.7 MB | **2.29×** |
+| `20` | 30 | 2.23 s | 13.46 pages/s | 48.4 MB | **2.58×** |
+
+### Аналіз результатів та етика краулінгу
+
+* **Чому `asyncio` прискорює I/O-bound задачі в одному потоці:** при `concurrency=1` краулер послідовно чекає на мережевий RTT кожного HTTP-запиту. При переході до `concurrency=5` та `20` корутини перекривають очікування I/O в одному потоці event loop без накладних витрат на процеси (RSS зріс лише з 41.4 MB до 48.4 MB).
+* **Спадне прискорення на високій конкурентності:** між `concurrency=5` (11.91 pages/s) та `concurrency=20` (13.46 pages/s) приріст невеликий через обмеження пропускної здатності віддаленого сервера, TLS-рукостискання та глибину дерева посилань на старті.
+* **Етичність:** тестування проводилося виключно на навчальному пісочничному сайті `https://books.toscrape.com`, який спеціально призначений для практики вебскрапінгу та дозволяє обхід у `robots.txt`. Для реальних сайтів у `findex crawl` за замовчуванням увімкнено `--per-host 2`, `--min-delay 0.05` та перевірку `robots.txt`.
+
+### Демонстрація роботи Лабораторної 6
+
+```bash
+# Запуск тестів краулера (httpx.MockTransport, без мережевих запитів)
+uv run pytest tests/test_crawler_fetch.py tests/test_crawler_crawl.py -v
+
+# Запуск краулера через CLI з живою статистикою Rich та записом у JSONL
+findex crawl https://books.toscrape.com/ --max-pages 30 --concurrency 5 --out crawl.jsonl --log crawl.log
 ```
