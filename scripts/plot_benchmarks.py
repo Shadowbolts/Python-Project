@@ -4,6 +4,7 @@ Saves plot to docs/speedup_plot.png.
 """
 import json
 from pathlib import Path
+
 import matplotlib.pyplot as plt
 
 with open("benchmark_results.json") as f:

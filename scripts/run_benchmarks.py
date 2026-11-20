@@ -3,7 +3,6 @@ Benchmark script for Lab 05 concurrency and GIL experiments.
 Measures wall time, CPU time, parent process peak RSS, and merge time.
 """
 import json
-import os
 import time
 import tracemalloc
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -13,7 +12,6 @@ from typing import Literal
 import psutil
 
 from findex.index import _chunk_specs, build_partial, merge
-from findex.models import Index
 
 
 def run_benchmark_once(
@@ -55,7 +53,7 @@ def run_benchmark_once(
 
     t1_wall = time.perf_counter()
     t1_cpu = process.cpu_times().user + process.cpu_times().system
-    _, peak_bytes = tracemalloc.get_traced_memory()
+    _, _peak_bytes = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
     wall_sec = t1_wall - t0_wall
