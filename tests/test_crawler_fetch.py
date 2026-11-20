@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from findex.crawler.fetch import FetchResult, fetch
+from findex.crawler.fetch import fetch
 from findex.crawler.robots import RobotsCache
 
 

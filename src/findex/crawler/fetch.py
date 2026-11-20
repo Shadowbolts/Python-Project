@@ -2,11 +2,11 @@
 Polite async HTTP fetcher with retry, exponential backoff, jitter, and timeout.
 """
 import asyncio
-from dataclasses import dataclass
 import random
 import time
-import httpx
+from dataclasses import dataclass
 
+import httpx
 
 DEFAULT_USER_AGENT = "findex-crawler/0.1 (+https://github.com/Shadowbolts/Python-Project)"
 

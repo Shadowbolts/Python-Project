@@ -1,16 +1,17 @@
 """
 Robots.txt parsing, fetching, and caching.
 """
-from dataclasses import dataclass, field
 import urllib.robotparser
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
+
 import httpx
 
 
 @dataclass
 class RobotsCache:
     user_agent: str = "findex-crawler/0.1 (+https://github.com/Shadowbolts/Python-Project)"
-    _cache: dict[str, urllib.robotparser.RobotFileParser] = field(default_factory=dict)
+    _cache: dict[str, urllib.robotparser.RobotFileParser] = field(default_factory=dict[str, urllib.robotparser.RobotFileParser])
 
     async def get_parser(self, client: httpx.AsyncClient, host: str, scheme: str = "https") -> urllib.robotparser.RobotFileParser:
         if host in self._cache:
@@ -28,7 +29,7 @@ class RobotsCache:
                 rp.disallow_all = True  # type: ignore[attr-defined]
             else:
                 rp.allow_all = True  # type: ignore[attr-defined]
-        except Exception:
+        except (httpx.HTTPError, OSError):
             rp.allow_all = True  # type: ignore[attr-defined]
 
         self._cache[host] = rp
