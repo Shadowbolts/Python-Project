@@ -1,0 +1,34 @@
+{% if query %}
+  <div class="meta-bar">
+    Found <strong>{{ total }}</strong> result{{ "" if total == 1 else "s" }}
+    in <strong>{{ "%.2f"|format(took_ms) }} ms</strong> ({{ scorer|upper }})
+  </div>
+
+  {% if results %}
+    {% for item in results %}
+      <article class="result-card">
+        <div class="result-header">
+          <a class="result-title" href="/doc/{{ item.doc_id }}">{{ item.title }}</a>
+          <span class="result-score">score {{ "%.4f"|format(item.score) }}</span>
+        </div>
+        <p class="result-snippet">{{ item.snippet_html | safe }}</p>
+      </article>
+    {% endfor %}
+
+    {% if total_pages > 1 %}
+      <nav class="pagination">
+        {% if page > 1 %}
+          <a href="/?q={{ query|urlencode }}&scorer={{ scorer }}&page={{ page - 1 }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+          <a href="/?q={{ query|urlencode }}&scorer={{ scorer }}&page={{ page + 1 }}">Next</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">No matching documents found for "{{ query }}".</div>
+  {% endif %}
+{% else %}
+  <div class="empty-state">Enter a query above to search {{ num_docs }} indexed documents.</div>
+{% endif %}

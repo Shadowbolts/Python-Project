@@ -190,5 +190,25 @@ def crawl_cmd(
     )
 
 
+@app.command(name="serve")
+def serve_cmd(
+    host: Annotated[str, typer.Option("--host", help="Bind host.")] = "0.0.0.0",
+    port: Annotated[int, typer.Option("--port", "-p", help="Bind port.")] = 8000,
+    workers: Annotated[int, typer.Option("--workers", "-w", help="Number of uvicorn worker processes.")] = 1,
+    reload: Annotated[bool, typer.Option("--reload", help="Enable auto-reload for development.")] = False,
+) -> None:
+    """Start the FastAPI web search server via Uvicorn."""
+    import uvicorn
+
+    uvicorn.run(
+        "findex.web:app",
+        host=host,
+        port=port,
+        workers=workers,
+        reload=reload,
+        proxy_headers=True,
+    )
+
+
 if __name__ == "__main__":
     app()

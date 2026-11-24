@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>findex — Full-Text Search</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><a href="/">findex</a></h1>
+      <nav class="nav-links">
+        <a href="/docs">OpenAPI Docs</a>
+        <a href="/stats">Stats JSON</a>
+        <a href="/health">Health</a>
+      </nav>
+    </header>
+
+    <form class="search-form" action="/" method="get"
+          hx-get="/search-fragment"
+          hx-target="#results"
+          hx-trigger="keyup changed delay:300ms from:.search-input, change from:.scorer-select">
+      <input class="search-input"
+             type="search"
+             name="q"
+             value="{{ query }}"
+             placeholder="Search documents, e.g. sherlock AND &quot;baker street&quot;..."
+             autofocus />
+      <select class="scorer-select" name="scorer">
+        <option value="bm25" {% if scorer == "bm25" %}selected{% endif %}>BM25</option>
+        <option value="tfidf" {% if scorer == "tfidf" %}selected{% endif %}>TF-IDF</option>
+      </select>
+      <button class="search-btn" type="submit">Search</button>
+    </form>
+
+    <div id="results">
+      {% include "results_partial.html" %}
+    </div>
+  </div>
+</body>
+</html>

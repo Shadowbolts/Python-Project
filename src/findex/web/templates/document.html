@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ doc.title }} — findex</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><a href="/">findex</a></h1>
+      <nav class="nav-links">
+        <a href="/">Back to Search</a>
+        <a href="/docs/{{ doc.doc_id }}">JSON</a>
+      </nav>
+    </header>
+
+    <h2>{{ doc.title }}</h2>
+    <div class="meta-bar">
+      Document ID: {{ doc.doc_id }} · Tokens: {{ doc.length }} · Path: <code>{{ doc.path }}</code>
+    </div>
+
+    <div class="doc-content">{{ doc.content }}</div>
+  </div>
+</body>
+</html>
