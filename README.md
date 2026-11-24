@@ -323,3 +323,59 @@ uv run pytest tests/test_crawler_fetch.py tests/test_crawler_crawl.py -v
 # Запуск краулера через CLI з живою статистикою Rich та записом у JSONL
 findex crawl https://books.toscrape.com/ --max-pages 30 --concurrency 5 --out crawl.jsonl --log crawl.log
 ```
+
+---
+
+## Лабораторна робота 7: Вебсервіс на FastAPI, Pydantic, ASGI та деплой
+
+Мета роботи: перетворити пошукову систему `findex` на HTTP-сервіс та вебзастосунок на базі FastAPI, Pydantic v2, ASGI-сервера Uvicorn і шаблонізатора Jinja2 з htmx, забезпечити 12-factor конфігурацію через змінні середовища, контейнеризацію в Docker та навантажувальне тестування.
+
+### Архітектура вебмодуля `src/findex/web/`
+
+* `config.py` — клас `Settings` на базі `pydantic-settings`, що зчитує `INDEX_PATH`, `LOG_LEVEL`, `HOST`, `PORT` та `CORS_ORIGINS` зі змінних середовища або `.env`.
+* `schemas.py` — Pydantic-моделі на межі API: `SearchResponse`, `SearchResultItem`, `DocumentResponse`, `StatsResponse`, `HealthResponse`.
+* `deps.py` — провайдери залежностей `get_index` і `get_started_at` для `Depends` та зручної підміни у тестах через `dependency_overrides`.
+* `app.py` — фабрика `create_app()`, менеджер життєвого циклу `lifespan` для одноразового завантаження індексу, middleware для `X-Request-ID` і структурованого логування, маршрути API та HTML-сторінки.
+* `templates/` і `static/` — інтерфейс на Jinja2 + htmx із живим пошуком, підсвічуванням сніпетів через `<mark>`, пагінацією та переглядом повного тексту документа на `/doc/{doc_id}`.
+
+### Маршрути API та інтерфейсу
+
+* `GET /search` — ранжований пошук з валідацією параметрів `q`, `k`, `scorer`, `page` і пагінацією.
+* `GET /docs/{doc_id}` — отримання метаданих і тексту документа або статус `404`.
+* `GET /stats` — кількість документів, розмір словника, середня довжина, розмір індексу та час роботи сервера.
+* `GET /health` — перевірка готовності: статус `200` при завантаженому індексі та `503` при його відсутності.
+* `GET /` та `GET /doc/{doc_id}` — вебсторінки пошуку й перегляду документів, а `/docs` надає інтерактивну специфікацію OpenAPI.
+
+### Навантажувальне тестування
+
+Заміри виконано скриптом `scripts/run_web_benchmark.py` на індексі з 43 книг Project Gutenberg при 50 одночасних клієнтах протягом 5 секунд для запиту `sherlock holmes`:
+
+| Конфігурація | Маршрут | Конкурентність | RPS | p50 | p95 | p99 |
+|---|---|---|---|---|---|---|
+| local, 1 worker, `async def` | `/search-async` | 50 | 60.7 | 803.18 ms | 1418.11 ms | 2421.57 ms |
+| local, 1 worker, `def` | `/search` | 50 | 60.2 | 814.16 ms | 1136.47 ms | 1732.72 ms |
+| local, 4 workers, `def` | `/search` | 50 | 128.9 | 263.45 ms | 1033.00 ms | 1603.99 ms |
+
+### Аналіз результатів з огляду на попередні лабораторні
+
+* **`async def` проти `def` для CPU-bound маршрутів:** маршрут `/search` виконує ранжування BM25 та читання сніпетів з диска. У варіанті `async def` ця синхронна робота блокує єдиний event loop, тому хвостова затримка `p99` зростає до 2421.57 ms. У варіанті `def` FastAPI виносить обробник у пул потоків AnyIO, що залишає event loop вільним для мережевого введення-виведення та знижує `p99` до 1732.72 ms.
+* **Вплив GIL та масштабування через `--workers 4`:** на одному воркері пропускна здатність обмежена приблизно 60 RPS через GIL у CPython. Запуск 4 незалежних процесів Uvicorn дає кожному воркеру власний інтерпретатор і власний GIL, що піднімає пропускну здатність у 2.14 раза до 128.9 RPS і зменшує медіанну затримку `p50` з 814.16 ms до 263.45 ms.
+
+### Docker та деплой
+
+Додано багатоетапний `Dockerfile` на базі `uv` з непривілейованим користувачем `appuser`, `HEALTHCHECK` на `/health`, файли `.dockerignore`, `.env.example` та конфігурацію `render.yaml` для деплою на Render.
+
+### Демонстрація роботи Лабораторної 7
+
+```bash
+# Запуск тестів вебсервісу через TestClient і dependency_overrides
+uv run pytest tests/test_web.py -v
+
+# Локальний запуск сервера через CLI
+findex index data/ --out index.pkl --positions
+findex serve --port 8000 --workers 1
+
+# Збірка та запуск у Docker з передачею індексу через змінну середовища
+docker build -t findex .
+docker run -e INDEX_PATH=/app/index.pkl -v ${PWD}/index.pkl:/app/index.pkl -p 8000:8000 findex
+```
