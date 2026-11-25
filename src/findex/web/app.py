@@ -172,7 +172,7 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="findex Search API",
         description="Full-text search engine HTTP API and Web UI.",
-        version="0.7.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
 
